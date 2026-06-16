@@ -5,6 +5,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { GoogleOutlined, GithubOutlined } from "@ant-design/icons";
 
 type OAuthProvider = "google" | "github";
+type AuthMode = "login" | "signup";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -14,6 +15,7 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [mode, setMode] = useState<AuthMode>("login");
   const { redirect } = Route.useSearch();
 
   const { translate: t } = useTranslation();
@@ -27,26 +29,38 @@ function Login() {
     });
   }
 
-  async function handleLogInWithEmail(e?: React.FormEvent) {
+  async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setMessage(t("¡Credenciales inválidas!"));
+    if (mode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        setMessage(error.message);
+      } else {
+        setEmail("");
+        setPassword("");
+      }
     } else {
-      setEmail("");
-      setPassword("");
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) {
+        setMessage(error.message);
+      } else {
+        setMessage(t("Revisa tu correo para confirmar la cuenta"));
+      }
     }
   }
 
   return (
     <div className="flex flex-col gap-9 justify-center items-center bg-background text-foreground h-dvh w-screen">
       <div className="text-primary tracking-tighter font-bold text-[36px]">
-        OpenBSP
+        Kluste
       </div>
 
       <div className="flex flex-col gap-3 w-[250px]">
@@ -68,7 +82,7 @@ function Login() {
 
         <div className="border-b border-border w-full" />
 
-        <form onSubmit={handleLogInWithEmail} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form">
           <label>
             <div className="label">{t("Correo electrónico")}</div>
             <input
@@ -99,9 +113,17 @@ function Login() {
             type="submit"
             className="primary w-full mt-[16px]"
           >
-            {t("Entrar")}
+            {mode === "login" ? t("Entrar") : t("Crear cuenta")}
           </button>
         </form>
+
+        <button
+          type="button"
+          className="text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
+          onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); }}
+        >
+          {mode === "login" ? t("¿No tienes cuenta? Regístrate") : t("¿Ya tienes cuenta? Inicia sesión")}
+        </button>
       </div>
     </div>
   );
